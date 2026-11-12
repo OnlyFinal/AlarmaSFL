@@ -1,0 +1,52 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp"
+    android:background="@drawable/widget_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="ALARMA SFL"
+            android:textColor="#EEF2F7" android:textStyle="bold" android:textSize="14sp"/>
+        <TextView android:id="@+id/updated" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="sin datos"
+            android:textColor="#93A3BA" android:textSize="10sp"/>
+    </LinearLayout>
+    <TextView android:id="@+id/market" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="Plaza (P2P)"
+        android:textColor="#93A3BA" android:textSize="10sp" android:paddingTop="2dp"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:orientation="horizontal" android:paddingTop="8dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:orientation="vertical" android:paddingEnd="5dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="PEPPER" android:textColor="#FF5A4A" android:textStyle="bold" android:textSize="11sp"/>
+            <TextView android:id="@+id/pepper_price" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="--" android:textColor="#FFFFFF"
+                android:textSize="20sp" android:textStyle="bold"/>
+            <ImageView android:id="@+id/pepper_chart" android:layout_width="match_parent"
+                android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitXY"
+                android:contentDescription="Gráfica de Pepper"/>
+            <TextView android:id="@+id/pepper_status" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Sin alertas"
+                android:textColor="#93A3BA" android:textSize="9sp"/>
+        </LinearLayout>
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#33445D"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="5dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="BLUEBERRY" android:textColor="#6C8CFF" android:textStyle="bold" android:textSize="11sp"/>
+            <TextView android:id="@+id/blueberry_price" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="--" android:textColor="#FFFFFF"
+                android:textSize="20sp" android:textStyle="bold"/>
+            <ImageView android:id="@+id/blueberry_chart" android:layout_width="match_parent"
+                android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitXY"
+                android:contentDescription="Gráfica de Blueberry"/>
+            <TextView android:id="@+id/blueberry_status" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Sin alertas"
+                android:textColor="#93A3BA" android:textSize="9sp"/>
+        </LinearLayout>
+    </LinearLayout>
+    <TextView android:id="@+id/widget_error" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="" android:textColor="#FFB4A8"
+        android:textSize="9sp" android:maxLines="2"/>
+</LinearLayout>
