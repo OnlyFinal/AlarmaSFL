@@ -11,10 +11,14 @@ import kotlin.math.max
 
 class SflWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { update(context, manager, it) }
-        SflWork.schedule(context)
-    }
+    ids.forEach { update(context, manager, it) }
 
+    try {
+        SflWork.schedule(context)
+    } catch (e: Exception) {
+        android.util.Log.e("SflWidgetProvider", "Error al programar WorkManager", e)
+    }
+}
     companion object {
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
