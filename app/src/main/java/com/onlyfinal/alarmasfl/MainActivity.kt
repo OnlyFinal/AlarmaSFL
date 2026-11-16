@@ -6,6 +6,10 @@ import android.os.Build
 import android.os.Bundle
 import android.content.Context
 import android.text.InputType
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -28,6 +32,29 @@ class MainActivity : Activity() {
     private lateinit var errorLabel: TextView
     private var crops: List<String> = listOf("Pepper", "Blueberry")
     private var updatingMarket = false
+    private val cropIconData: org.json.JSONObject by lazy {
+        try { org.json.JSONObject(assets.open("crop_icons.json").bufferedReader().use { it.readText() }) }
+        catch (_: Exception) { org.json.JSONObject() }
+    }
+    private val cropIconCache = mutableMapOf<String, Drawable?>()
+
+    private fun cropIcon(name: String): Drawable? {
+        val key = name.lowercase().replace(Regex("[^a-z]"), "")
+        if (cropIconCache.containsKey(key)) return cropIconCache[key]
+        val aliases = mapOf("beet" to "beetroot", "sunflowerseed" to "sunflower")
+        val assetKey = aliases[key] ?: key
+        val encoded = cropIconData.optString(assetKey).ifBlank { cropIconData.optString("default") }
+        val drawable = try {
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            BitmapDrawable(resources, bitmap).apply {
+                val size = (30 * resources.displayMetrics.density).toInt()
+                setBounds(0, 0, size, size)
+            }
+        } catch (_: Exception) { null }
+        cropIconCache[key] = drawable
+        return drawable
+    }
 
     private val periodLabels = listOf("1 hora", "6 horas", "24 horas", "7 días")
     private val periodKeys = listOf("1h", "6h", "24h", "7d")
@@ -246,6 +273,9 @@ class MainActivity : Activity() {
                             setBackgroundColor(0xFFFFFCF4.toInt())
                             minHeight = (48 * resources.displayMetrics.density).toInt()
                         }
+                        val icon = cropIcon(value)
+                        setCompoundDrawables(icon, null, null, null)
+                        compoundDrawablePadding = (9 * resources.displayMetrics.density).toInt()
                     }
                 }
             }
@@ -333,6 +363,8 @@ class MainActivity : Activity() {
                 text = "$crop · ${if (kind == "buy") "Compra ≤" else "Venta ≥"} ${fmt(target)}"
                 isChecked = alarm.optBoolean("enabled", true)
                 setTextColor(0xFF334638.toInt())
+                setCompoundDrawables(cropIcon(crop), null, null, null)
+                compoundDrawablePadding = (8 * resources.displayMetrics.density).toInt()
                 setOnCheckedChangeListener { _, checked ->
                     updateAlarm(id) { it.put("enabled", checked).put("armed", true) }
                 }
