@@ -27,6 +27,7 @@ object SflData {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val all = alarms(context)
         var changed = false
+        val cleanup = prefs.edit()
         listOf("Pepper", "Blueberry").forEach { crop ->
             listOf("buy", "sell").forEach { kind ->
                 val target = prefs.getString("${crop}_${kind}", "")?.toDoubleOrNull()
@@ -43,9 +44,11 @@ object SflData {
                             .put("target", target).put("enabled", true).put("armed", true))
                         changed = true
                     }
+                    cleanup.remove("${crop}_${kind}")
                 }
             }
         }
+        cleanup.apply()
         if (changed) saveAlarms(context, all)
     }
 
