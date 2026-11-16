@@ -86,7 +86,7 @@ class MainActivity : Activity() {
         source.setSelection(if (prefs.getString("source", "p2p") == "seq") 1 else 0)
         root.addView(source)
 
-        root.addView(heading("2. SELECCIONA LOS CULTIVOS DEL WIDGET"))
+        root.addView(heading("2. ELIGE LOS CULTIVOS DEL WIDGET"))
         root.addView(label("Espacio 1", 13f, 0xFFB8C7D9.toInt()))
         slotOne = spinner(crops); root.addView(slotOne)
         root.addView(label("Espacio 2", 13f, 0xFFB8C7D9.toInt()))
@@ -106,7 +106,7 @@ class MainActivity : Activity() {
             }
         })
 
-        root.addView(heading("3. PRECIOS DE LA ALARMA"))
+        root.addView(heading("3. CONFIGURA LAS ALARMAS DE COMPRA Y VENTA"))
         root.addView(label("Cultivo que quieres vigilar", 13f, 0xFFB8C7D9.toInt()))
         cropForAlarm = spinner(crops); root.addView(cropForAlarm)
         alarmBuy = priceInput("Comprar cuando baje a… (ej. 0.020)")
@@ -138,15 +138,15 @@ class MainActivity : Activity() {
             }
         })
 
-        root.addView(heading("4. ALARMAS CONFIGURADAS"))
-        alarmList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(alarmList)
-
-        root.addView(heading("5. PRECIOS DISPONIBLES"))
+        root.addView(heading("5. CONSULTAR PRECIOS DISPONIBLES"))
         root.addView(label("Selecciona un cultivo para consultar su precio actual en el mercado elegido.", 11f, 0xFF93A3BA.toInt()))
         priceCrop = spinner(crops); root.addView(priceCrop)
         priceValue = label("Precio: --", 20f)
         root.addView(priceValue)
+
+        root.addView(heading("4. ALARMAS CONFIGURADAS"))
+        alarmList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(alarmList)
         priceCrop.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
