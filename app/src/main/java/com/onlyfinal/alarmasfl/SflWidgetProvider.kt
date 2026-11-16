@@ -34,8 +34,8 @@ class SflWidgetProvider : AppWidgetProvider() {
             val crop1 = p.getString("widget_crop_1", "Pepper") ?: "Pepper"
             val crop2 = p.getString("widget_crop_2", "Blueberry") ?: "Blueberry"
             val period = p.getString("history_period", "24h") ?: "24h"
-            setItem(context, v, p, market, crop1, period, R.id.pepper_name, R.id.pepper_price, R.id.pepper_chart, R.id.pepper_status, R.id.pepper_icon, Color.rgb(255,90,74))
-            setItem(context, v, p, market, crop2, period, R.id.blueberry_name, R.id.blueberry_price, R.id.blueberry_chart, R.id.blueberry_status, R.id.blueberry_icon, Color.rgb(108,140,255))
+            setItem(context, v, p, market, crop1, period, R.id.pepper_name, R.id.pepper_price, R.id.pepper_chart, R.id.pepper_status, Color.rgb(71,118,74))
+            setItem(context, v, p, market, crop2, period, R.id.blueberry_name, R.id.blueberry_price, R.id.blueberry_chart, R.id.blueberry_status, Color.rgb(83,108,156))
             v.setTextViewText(R.id.widget_error, p.getString("last_error", "") ?: "")
             val intent = Intent(context, MainActivity::class.java)
             val pi = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -45,14 +45,8 @@ class SflWidgetProvider : AppWidgetProvider() {
 
         private fun setItem(context: Context, v: RemoteViews, p: android.content.SharedPreferences,
                             market: String, name: String, period: String, nameId: Int, priceId: Int,
-                            chartId: Int, statusId: Int, iconId: Int, color: Int) {
+                            chartId: Int, statusId: Int, color: Int) {
             v.setTextViewText(nameId, name.uppercase())
-            val icon = when (name.lowercase()) {
-                "pepper" -> R.drawable.ic_crop_pepper
-                "blueberry" -> R.drawable.ic_crop_blueberry
-                else -> R.drawable.ic_crop_generic
-            }
-            v.setImageViewResource(iconId, icon)
             val key = SflData.priceKey(market, name)
             val price = p.getString(key, null)?.toDoubleOrNull()
                 ?: p.getString("${name}_price", null)?.toDoubleOrNull()
