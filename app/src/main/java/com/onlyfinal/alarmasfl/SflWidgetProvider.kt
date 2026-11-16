@@ -133,10 +133,8 @@ class SflWidgetProvider : AppWidgetProvider() {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
                 NotificationChannel("sfl_alerts", "Alertas SFL", NotificationManager.IMPORTANCE_HIGH))
-            val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, "sfl_alerts") else {
-                @Suppress("DEPRECATION") Notification.Builder(context)
-            }
-            val notification = builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+            val notification = androidx.core.app.NotificationCompat.Builder(context, "sfl_alerts")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle((if (kind == "buy") "Comprar " else "Vender ") + name)
                 .setContentText("Precio actual: ${fmt(price)}")
                 .setAutoCancel(true).build()
