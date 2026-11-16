@@ -13,7 +13,13 @@ jobs:
       - name: Descargar proyecto
         uses: actions/checkout@v4
 
-      - name: Recuperar firma estable de desarrollo\n        uses: actions/cache@v4\n        with:\n          path: ~/.android/debug.keystore\n          key: alarmasfl-debug-signing-v1\n\n      - name: Configurar Java
+      - name: Recuperar firma estable de desarrollo
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: alarmasfl-debug-signing-v1
+
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,6 +50,13 @@ jobs:
           cat settings.gradle.kts
           echo "=== BUILD.GRADLE.KTS ==="
           cat build.gradle.kts
+
+      - name: Preparar firma estable si aún no existe
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AlarmaSFL Development,O=OnlyFinal,C=CU"
+          fi
 
       - name: Compilar APK
         run: gradle assembleDebug --stacktrace
