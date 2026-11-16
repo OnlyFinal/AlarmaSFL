@@ -41,19 +41,23 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 24, 24, 24)
-            setBackgroundColor(0xFF16202E.toInt())
+            setPadding(18, 18, 18, 24)
+            setBackgroundColor(0xFFF1E8D2.toInt())
         }
-        fun label(value: String, size: Float = 14f, color: Int = 0xFFEEF2F7.toInt()) =
+        fun label(value: String, size: Float = 14f, color: Int = 0xFF334638.toInt()) =
             TextView(this).apply {
                 text = value
                 textSize = size
                 setTextColor(color)
                 setPadding(0, 10, 0, 5)
             }
-        fun heading(value: String) = label(value, 17f).apply {
+        fun heading(value: String) = label(value, 15f, 0xFFF8F1DF.toInt()).apply {
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 20, 0, 7)
+            setPadding(13, 11, 13, 11)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFF355B3E.toInt())
+                cornerRadius = 12f
+            }
         }
         fun spinner(items: List<String>) = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, items).also {
@@ -61,7 +65,7 @@ class MainActivity : Activity() {
             }
         }
         fun addField(title: String, field: EditText) {
-            root.addView(label(title, 13f, 0xFFB8C7D9.toInt()))
+            root.addView(label(title, 13f, 0xFF71806B.toInt()))
             root.addView(field, LinearLayout.LayoutParams(-1, -2))
         }
         fun priceInput(hintText: String) = EditText(this).apply {
@@ -70,13 +74,21 @@ class MainActivity : Activity() {
             setSingleLine(true)
             textSize = 16f
             setPadding(12, 8, 12, 8)
-            setTextColor(0xFFEEF2F7.toInt())
-            setHintTextColor(0xFF93A3BA.toInt())
-            setBackgroundColor(0xFF243349.toInt())
+            setTextColor(0xFF263B2D.toInt())
+            setHintTextColor(0xFF8B927E.toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFFFFFCF4.toInt())
+                cornerRadius = 10f
+                setStroke(1, 0xFFD1C5A9.toInt())
+            }
         }
 
-        root.addView(label("ALARMA SFL", 23f).apply { setTypeface(null, android.graphics.Typeface.BOLD) })
-        updateLabel = label("Sin datos", 11f, 0xFF93A3BA.toInt())
+        root.addView(label("🌻  ALARMASFL", 25f, 0xFF294B32.toInt()).apply {
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(2, 8, 0, 0)
+        })
+        root.addView(label("HERRAMIENTAS DE MERCADO · SUNFLOWER LAND", 10f, 0xFF71806B.toInt()))
+        updateLabel = label("Sin datos", 11f, 0xFF71806B.toInt())
         root.addView(updateLabel)
         errorLabel = label("", 11f, 0xFFFFB4A8.toInt())
         root.addView(errorLabel)
@@ -87,11 +99,11 @@ class MainActivity : Activity() {
         root.addView(source)
 
         root.addView(heading("2. ELIGE LOS CULTIVOS DEL WIDGET"))
-        root.addView(label("Espacio 1", 13f, 0xFFB8C7D9.toInt()))
+        root.addView(label("Espacio 1", 13f, 0xFF71806B.toInt()))
         slotOne = spinner(crops); root.addView(slotOne)
-        root.addView(label("Espacio 2", 13f, 0xFFB8C7D9.toInt()))
+        root.addView(label("Espacio 2", 13f, 0xFF71806B.toInt()))
         slotTwo = spinner(crops); root.addView(slotTwo)
-        root.addView(label("Período de la gráfica y los indicadores", 13f, 0xFFB8C7D9.toInt()))
+        root.addView(label("Período de la gráfica y los indicadores", 13f, 0xFF71806B.toInt()))
         historyPeriod = spinner(periodLabels); root.addView(historyPeriod)
         root.addView(Button(this).apply {
             text = "GUARDAR CONFIGURACIÓN DEL WIDGET"
@@ -107,13 +119,13 @@ class MainActivity : Activity() {
         })
 
         root.addView(heading("3. CONFIGURA LAS ALARMAS DE COMPRA Y VENTA"))
-        root.addView(label("Cultivo que quieres vigilar", 13f, 0xFFB8C7D9.toInt()))
+        root.addView(label("Cultivo que quieres vigilar", 13f, 0xFF71806B.toInt()))
         cropForAlarm = spinner(crops); root.addView(cropForAlarm)
         alarmBuy = priceInput("Comprar cuando baje a… (ej. 0.020)")
         addField("Precio de COMPRA (opcional)", alarmBuy)
         alarmSell = priceInput("Vender cuando suba a… (ej. 0.030)")
         addField("Precio de VENTA (opcional)", alarmSell)
-        root.addView(label("Puedes indicar uno o los dos precios. Cada objetivo crea una alarma independiente.", 11f, 0xFF93A3BA.toInt()))
+        root.addView(label("Puedes indicar uno o los dos precios. Cada objetivo crea una alarma independiente.", 11f, 0xFF71806B.toInt()))
         root.addView(Button(this).apply {
             text = "GUARDAR ALARMA(S)"
             setOnClickListener {
@@ -139,9 +151,9 @@ class MainActivity : Activity() {
         })
 
         root.addView(heading("5. CONSULTAR PRECIOS DISPONIBLES"))
-        root.addView(label("Selecciona un cultivo para consultar su precio actual en el mercado elegido.", 11f, 0xFF93A3BA.toInt()))
+        root.addView(label("Selecciona un cultivo para consultar su precio actual en el mercado elegido.", 11f, 0xFF71806B.toInt()))
         priceCrop = spinner(crops); root.addView(priceCrop)
-        priceValue = label("Precio: --", 20f)
+        priceValue = label("Precio: --", 21f, 0xFF2F713F.toInt()).apply { setTypeface(null, android.graphics.Typeface.BOLD) }
         root.addView(priceValue)
 
         root.addView(heading("4. ALARMAS CONFIGURADAS"))
@@ -162,7 +174,7 @@ class MainActivity : Activity() {
                 Toast.makeText(this@MainActivity, "Actualización solicitada", Toast.LENGTH_SHORT).show()
             }
         })
-        root.addView(label("Las consultas automáticas se ejecutan en segundo plano. Android puede espaciar las actualizaciones.", 11f, 0xFF93A3BA.toInt()))
+        root.addView(label("Las consultas automáticas se ejecutan en segundo plano. Android puede espaciar las actualizaciones.", 11f, 0xFF71806B.toInt()))
 
         source.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -174,7 +186,37 @@ class MainActivity : Activity() {
             }
         }
 
+        fun applyControlStyle(view: View) {
+            when (view) {
+                is Button -> {
+                    view.background = android.graphics.drawable.GradientDrawable().apply {
+                        setColor(0xFF47764A.toInt())
+                        cornerRadius = 12f
+                        setStroke(1, 0xFF315B38.toInt())
+                    }
+                    view.setTextColor(0xFFFFF8E9.toInt())
+                    view.textSize = 13f
+                    view.isAllCaps = false
+                    view.setPadding(14, 12, 14, 12)
+                    view.elevation = 2f
+                }
+                is Spinner -> {
+                    view.background = android.graphics.drawable.GradientDrawable().apply {
+                        setColor(0xFFFFFCF4.toInt())
+                        cornerRadius = 10f
+                        setStroke(1, 0xFFD1C5A9.toInt())
+                    }
+                    view.setPadding(10, 4, 10, 4)
+                }
+                is CheckBox -> view.buttonTintList = android.content.res.ColorStateList.valueOf(0xFF47764A.toInt())
+            }
+            if (view is LinearLayout) for (i in 0 until view.childCount) applyControlStyle(view.getChildAt(i))
+        }
+        applyControlStyle(root)
+        window.statusBarColor = 0xFF294B32.toInt()
+        window.navigationBarColor = 0xFF294B32.toInt()
         setContentView(ScrollView(this).apply {
+            setBackgroundColor(0xFFF1E8D2.toInt())
             isFillViewport = true
             addView(root)
         })
@@ -259,12 +301,12 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(8, 5, 4, 5)
-                setBackgroundColor(0xFF1F2C3F.toInt())
+                setBackgroundColor(0xFFE5D8BA.toInt())
             }
             val check = CheckBox(this).apply {
                 text = "$crop · ${if (kind == "buy") "Compra ≤" else "Venta ≥"} ${fmt(target)}"
                 isChecked = alarm.optBoolean("enabled", true)
-                setTextColor(0xFFEEF2F7.toInt())
+                setTextColor(0xFF334638.toInt())
                 setOnCheckedChangeListener { _, checked ->
                     updateAlarm(id) { it.put("enabled", checked).put("armed", true) }
                 }
@@ -290,7 +332,7 @@ class MainActivity : Activity() {
         if (visible == 0) {
             alarmList.addView(TextView(this).apply {
                 text = "No hay alarmas para este mercado."
-                setTextColor(0xFF93A3BA.toInt())
+                setTextColor(0xFF71806B.toInt())
             })
         }
     }
