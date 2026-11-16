@@ -60,9 +60,13 @@ class MainActivity : Activity() {
             }
         }
         fun spinner(items: List<String>) = Spinner(this).apply {
-            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, items).also {
-                it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            adapter = styledSpinnerAdapter(items)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFFFFFCF4.toInt())
+                cornerRadius = 10f
+                setStroke(1, 0xFFB9A783.toInt())
             }
+            setPadding(10, 4, 10, 4)
         }
         fun addField(title: String, field: EditText) {
             root.addView(label(title, 13f, 0xFF71806B.toInt()))
@@ -228,6 +232,30 @@ class MainActivity : Activity() {
         SflWork.refreshNow(this)
     }
 
+    private fun styledSpinnerAdapter(items: List<String>): ArrayAdapter<String> {
+        return object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items) {
+            private fun styledView(position: Int, parent: android.view.ViewGroup?, dropdown: Boolean): TextView {
+                return (getItem(position) ?: "").let { value ->
+                    TextView(this@MainActivity).apply {
+                        text = value
+                        textSize = 15f
+                        setTextColor(0xFF263B2D.toInt())
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(14, if (dropdown) 13 else 9, 14, if (dropdown) 13 else 9)
+                        if (dropdown) {
+                            setBackgroundColor(0xFFFFFCF4.toInt())
+                            minHeight = (48 * resources.displayMetrics.density).toInt()
+                        }
+                    }
+                }
+            }
+            override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+                styledView(position, parent, false)
+            override fun getDropDownView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+                styledView(position, parent, true)
+        }
+    }
+
     private fun currentMarket() = if (source.selectedItemPosition == 1) "seq" else "p2p"
 
     private fun saveMarket() {
@@ -245,9 +273,7 @@ class MainActivity : Activity() {
         val previousTwo = prefs.getString("widget_crop_2", "Blueberry") ?: "Blueberry"
         val previousAlarm = if (::cropForAlarm.isInitialized) cropForAlarm.selectedItem?.toString() else null
         val previousPrice = if (::priceCrop.isInitialized) priceCrop.selectedItem?.toString() else null
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, crops).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
+        val adapter = styledSpinnerAdapter(crops)
         if (::slotOne.isInitialized) slotOne.adapter = adapter
         if (::slotTwo.isInitialized) slotTwo.adapter = adapter
         if (::cropForAlarm.isInitialized) cropForAlarm.adapter = adapter
