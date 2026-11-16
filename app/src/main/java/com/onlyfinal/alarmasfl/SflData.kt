@@ -23,28 +23,32 @@ object SflData {
             .putString(ALARMS_KEY, alarms.toString()).apply()
     }
 
-    fun migrateLegacyAlarms(context: Context, market: String) {
+    // Migra los límites antiguos a ambos mercados antes de retirar las claves antiguas.
+    fun migrateLegacyAlarms(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val all = alarms(context)
-        var changed = false
         val cleanup = prefs.edit()
+        var changed = false
         listOf("Pepper", "Blueberry").forEach { crop ->
             listOf("buy", "sell").forEach { kind ->
-                val target = prefs.getString("${crop}_${kind}", "")?.toDoubleOrNull()
+                val key = "${crop}_${kind}"
+                val target = prefs.getString(key, "")?.toDoubleOrNull()
                 if (target != null) {
-                    val exists = (0 until all.length()).any { i ->
-                        val a = all.optJSONObject(i)
-                        a != null && a.optString("crop").equals(crop, true) &&
-                            a.optString("market") == market && a.optString("kind") == kind &&
-                            a.optDouble("target") == target
+                    listOf("p2p", "seq").forEach { market ->
+                        val exists = (0 until all.length()).any { i ->
+                            val a = all.optJSONObject(i)
+                            a != null && a.optString("crop").equals(crop, true) &&
+                                a.optString("market") == market && a.optString("kind") == kind &&
+                                a.optDouble("target") == target
+                        }
+                        if (!exists) {
+                            all.put(JSONObject().put("id", java.util.UUID.randomUUID().toString())
+                                .put("crop", crop).put("market", market).put("kind", kind)
+                                .put("target", target).put("enabled", true).put("armed", true))
+                            changed = true
+                        }
                     }
-                    if (!exists) {
-                        all.put(JSONObject().put("id", java.util.UUID.randomUUID().toString())
-                            .put("crop", crop).put("market", market).put("kind", kind)
-                            .put("target", target).put("enabled", true).put("armed", true))
-                        changed = true
-                    }
-                    cleanup.remove("${crop}_${kind}")
+                    cleanup.remove(key)
                 }
             }
         }
