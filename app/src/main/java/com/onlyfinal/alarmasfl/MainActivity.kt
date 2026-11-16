@@ -21,7 +21,7 @@ class MainActivity : Activity() {
     private lateinit var alarmList: LinearLayout
     private lateinit var slotOne: Spinner
     private lateinit var slotTwo: Spinner
-    private lateinit var widgetMode: Spinner
+    private lateinit var historyPeriod: Spinner
     private lateinit var priceCrop: Spinner
     private lateinit var priceValue: TextView
     private lateinit var updateLabel: TextView
@@ -29,8 +29,8 @@ class MainActivity : Activity() {
     private var crops: List<String> = listOf("Pepper", "Blueberry")
     private var updatingMarket = false
 
-    private val modes = listOf("Gráfica", "Variación porcentual", "Proximidad a objetivos", "Estadísticas", "Oportunidad")
-    private val modeKeys = listOf("graph", "change", "distance", "stats", "opportunity")
+    private val periodLabels = listOf("1 hora", "6 horas", "24 horas", "7 días")
+    private val periodKeys = listOf("1h", "6h", "24h", "7d")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,15 +91,15 @@ class MainActivity : Activity() {
         slotOne = spinner(crops); root.addView(slotOne)
         root.addView(label("Espacio 2", 13f, 0xFFB8C7D9.toInt()))
         slotTwo = spinner(crops); root.addView(slotTwo)
-        root.addView(label("Qué información mostrar en los dos espacios", 13f, 0xFFB8C7D9.toInt()))
-        widgetMode = spinner(modes); root.addView(widgetMode)
+        root.addView(label("Período de la gráfica y los indicadores", 13f, 0xFFB8C7D9.toInt()))
+        historyPeriod = spinner(periodLabels); root.addView(historyPeriod)
         root.addView(Button(this).apply {
             text = "GUARDAR CONFIGURACIÓN DEL WIDGET"
             setOnClickListener {
                 prefs.edit()
                     .putString("widget_crop_1", slotOne.selectedItem?.toString() ?: "Pepper")
                     .putString("widget_crop_2", slotTwo.selectedItem?.toString() ?: "Blueberry")
-                    .putString("widget_mode", modeKeys.getOrElse(widgetMode.selectedItemPosition) { "graph" })
+                    .putString("history_period", periodKeys.getOrElse(historyPeriod.selectedItemPosition) { "24h" })
                     .apply()
                 SflWidgetProvider.updateAll(this@MainActivity)
                 Toast.makeText(this@MainActivity, "Configuración guardada", Toast.LENGTH_SHORT).show()
@@ -229,7 +229,7 @@ class MainActivity : Activity() {
     private fun loadWidgetSettings() {
         selectSpinner(slotOne, prefs.getString("widget_crop_1", "Pepper") ?: "Pepper")
         selectSpinner(slotTwo, prefs.getString("widget_crop_2", "Blueberry") ?: "Blueberry")
-        widgetMode.setSelection(modeKeys.indexOf(prefs.getString("widget_mode", "graph")).coerceAtLeast(0))
+        historyPeriod.setSelection(periodKeys.indexOf(prefs.getString("history_period", "24h")).coerceAtLeast(0))
     }
 
     private fun refreshSelectedPrice() {
