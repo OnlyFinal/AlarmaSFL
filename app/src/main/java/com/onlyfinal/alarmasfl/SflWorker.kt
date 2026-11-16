@@ -10,7 +10,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Android implementation of the working HTML getJSON()/load() flow. */
 class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val prefs = applicationContext.getSharedPreferences("sfl", Context.MODE_PRIVATE)
@@ -18,33 +17,45 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             val source = prefs.getString("source", "p2p") ?: "p2p"
             val json = getJson(prefs)
             val root = json.optJSONObject("data") ?: json
-            val market = (findObject(root, source) ?: if (root.has(source)) root.optJSONObject(source) else null)
-                ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()} en la respuesta")
+            val market = findObject(root, source)
+                ?: root.optJSONObject(source)
+                ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()}")
+
+            val prices = linkedMapOf<String, Double>()
+            collectPrices(market, prices)
+            if (prices.isEmpty()) throw IllegalStateException("La API no devolvió precios reconocibles para ${source.uppercase()}")
 
             val now = System.currentTimeMillis()
             val editor = prefs.edit()
-            var found = 0
-            listOf("Pepper", "Blueberry").forEach { name ->
-                val raw = market.opt(name) ?: findValue(market, name)
-                val price = toPrice(raw)
-                if (price != null && price.isFinite() && price >= 0.0) {
-                    found++
-                    editor.putString("${name}_price", price.toString())
-                    val history = JSONArray(prefs.getString("${name}_history", "[]") ?: "[]")
-                    val last = if (history.length() > 0) history.optJSONObject(history.length() - 1) else null
-                    if (last == null || last.optDouble("p", Double.NaN) != price || now - last.optLong("t") > 14 * 60 * 1000L) {
-                        history.put(JSONObject().put("t", now).put("p", price))
+            val cropNames = JSONArray()
+            prices.forEach { (crop, price) ->
+                cropNames.put(crop)
+                editor.putString(SflData.priceKey(source, crop), price.toString())
+                val historyKey = SflData.historyKey(source, crop)
+                val history = try { JSONArray(prefs.getString(historyKey, "[]") ?: "[]") } catch (_: Exception) { JSONArray() }
+                val last = if (history.length() > 0) history.optJSONObject(history.length() - 1) else null
+                if (last == null || last.optDouble("p", Double.NaN) != price || now - last.optLong("t") > 14 * 60 * 1000L) {
+                    history.put(JSONObject().put("t", now).put("p", price))
+                }
+                while (history.length() > 3000) history.remove(0)
+                editor.putString(historyKey, history.toString())
+
+                // Mantener compatibilidad con la configuración e historial antiguos.
+                if (crop.equals("Pepper", true) || crop.equals("Blueberry", true)) {
+                    editor.putString("${crop}_price", price.toString())
+                    val oldHistory = JSONArray(prefs.getString("${crop}_history", "[]") ?: "[]")
+                    val oldLast = if (oldHistory.length() > 0) oldHistory.optJSONObject(oldHistory.length() - 1) else null
+                    if (oldLast == null || oldLast.optDouble("p", Double.NaN) != price || now - oldLast.optLong("t") > 14 * 60 * 1000L) {
+                        oldHistory.put(JSONObject().put("t", now).put("p", price))
                     }
-                    while (history.length() > 3000) history.remove(0)
-                    editor.putString("${name}_history", history.toString())
-                    checkAlarm(prefs, name, price)
+                    while (oldHistory.length() > 3000) oldHistory.remove(0)
+                    editor.putString("${crop}_history", oldHistory.toString())
                 }
             }
-            if (found == 0) {
-                throw IllegalStateException("No encontré Pepper ni Blueberry en el mercado ${source.uppercase()}. Respuesta: ${json.toString().take(400)}")
-            }
-            // Only mark the fetch as successful after at least one valid price was parsed.
-            editor.putLong("updated", now).remove("last_error").apply()
+            editor.putString(SflData.cropsKey(source), cropNames.toString())
+                .putLong("updated", now).remove("last_error").apply()
+
+            checkAlarms(source, prices)
             SflWidgetProvider.updateAll(applicationContext)
             Result.success()
         } catch (e: Exception) {
@@ -54,7 +65,31 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
         }
     }
 
-    /** Direct request first; proxies are fallbacks, matching the HTML's route strategy. */
+    private fun checkAlarms(market: String, prices: Map<String, Double>) {
+        val all = SflData.alarms(applicationContext)
+        var changed = false
+        for (i in 0 until all.length()) {
+            val alarm = all.optJSONObject(i) ?: continue
+            if (!alarm.optBoolean("enabled", true) || !alarm.optString("market", "p2p").equals(market, true)) continue
+            val crop = alarm.optString("crop")
+            val price = prices.entries.firstOrNull { it.key.equals(crop, true) }?.value ?: continue
+            val target = alarm.optDouble("target", Double.NaN)
+            if (!target.isFinite()) continue
+            val buy = alarm.optString("kind") == "buy"
+            val reached = if (buy) price <= target else price >= target
+            val armed = alarm.optBoolean("armed", true)
+            if (reached && armed) {
+                SflWidgetProvider.notifyPrice(applicationContext, crop, if (buy) "buy" else "sell", price, alarm.optString("id"))
+                alarm.put("armed", false)
+                changed = true
+            } else if (!reached && !armed) {
+                alarm.put("armed", true)
+                changed = true
+            }
+        }
+        if (changed) SflData.saveAlarms(applicationContext, all)
+    }
+
     private fun getJson(prefs: android.content.SharedPreferences): JSONObject {
         val api = "https://sfl.world/api/v1/prices"
         val routes: List<(String) -> String> = listOf(
@@ -70,71 +105,58 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             var connection: HttpURLConnection? = null
             try {
                 connection = (URL(routes[index](api)).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 12000
-                    requestMethod = "GET"
+                    connectTimeout = 12000; readTimeout = 12000; requestMethod = "GET"
                     setRequestProperty("Accept", "application/json")
                     setRequestProperty("User-Agent", "AlarmaSFL-Android/1.0")
                 }
                 val code = connection.responseCode
                 if (code !in 200..299) throw IllegalStateException("HTTP $code")
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                val parsed = JSONObject(body)
+                val parsed = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                 prefs.edit().putInt("route", index).apply()
                 return parsed
             } catch (e: Exception) {
                 errors += "ruta $index: ${e.message ?: e.javaClass.simpleName}"
-            } finally {
-                connection?.disconnect()
-            }
+            } finally { connection?.disconnect() }
         }
         throw IllegalStateException(errors.joinToString(" | "))
     }
 
-    private fun checkAlarm(prefs: android.content.SharedPreferences, name: String, price: Double) {
-        val buy = prefs.getString("${name}_buy", "")?.toDoubleOrNull()
-        val sell = prefs.getString("${name}_sell", "")?.toDoubleOrNull()
-        val kind = when {
-            buy != null && price <= buy -> "buy"
-            sell != null && price >= sell -> "sell"
-            else -> ""
-        }
-        val old = prefs.getString("${name}_alarm", "") ?: ""
-        if (kind.isNotEmpty() && kind != old) SflWidgetProvider.notifyPrice(applicationContext, name, kind, price)
-        prefs.edit().putString("${name}_alarm", kind).apply()
-    }
-
     private fun findObject(value: Any?, key: String, depth: Int = 0): JSONObject? {
-        if (depth > 6) return null
+        if (depth > 7) return null
         when (value) {
             is JSONObject -> {
                 val keys = value.keys()
                 while (keys.hasNext()) {
-                    val k = keys.next(); val child = value.opt(k)
-                    if (k.equals(key, true) && child is JSONObject) return child
+                    val k = keys.next()
+                    if (k.equals(key, true)) value.optJSONObject(k)?.let { return it }
                 }
-                val keys2 = value.keys()
-                while (keys2.hasNext()) findObject(value.opt(keys2.next()), key, depth + 1)?.let { return it }
+                val nested = value.keys()
+                while (nested.hasNext()) findObject(value.opt(nested.next()), key, depth + 1)?.let { return it }
             }
             is JSONArray -> for (i in 0 until value.length()) findObject(value.opt(i), key, depth + 1)?.let { return it }
         }
         return null
     }
 
-    private fun findValue(value: Any?, key: String, depth: Int = 0): Any? {
-        if (depth > 6) return null
+    private fun collectPrices(value: Any?, out: MutableMap<String, Double>, depth: Int = 0) {
+        if (depth > 8) return
         when (value) {
             is JSONObject -> {
                 val keys = value.keys()
                 while (keys.hasNext()) {
-                    val k = keys.next(); if (k.equals(key, true)) return value.opt(k)
+                    val key = keys.next()
+                    val child = value.opt(key)
+                    val price = toPrice(child)
+                    if (price != null && price.isFinite() && price >= 0.0 &&
+                        key.lowercase() !in setOf("price", "floor", "value", "min", "max", "updated", "timestamp")) {
+                        out[key] = price
+                    } else if (child is JSONObject || child is JSONArray) {
+                        collectPrices(child, out, depth + 1)
+                    }
                 }
-                val keys2 = value.keys()
-                while (keys2.hasNext()) findValue(value.opt(keys2.next()), key, depth + 1)?.let { return it }
             }
-            is JSONArray -> for (i in 0 until value.length()) findValue(value.opt(i), key, depth + 1)?.let { return it }
+            is JSONArray -> for (i in 0 until value.length()) collectPrices(value.opt(i), out, depth + 1)
         }
-        return null
     }
 
     private fun toPrice(value: Any?, depth: Int = 0): Double? {
@@ -144,8 +166,7 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             is String -> value.trim().replace(',', '.').toDoubleOrNull()
             is JSONObject -> {
                 for (key in listOf("price", "floor", "value", "min")) {
-                    val candidate = toPrice(value.opt(key), depth + 1)
-                    if (candidate != null) return candidate
+                    toPrice(value.opt(key), depth + 1)?.let { return it }
                 }
                 null
             }
