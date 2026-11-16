@@ -54,6 +54,7 @@ class MainActivity : Activity() {
         source.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                saveMarket()
                 loadCrops()
                 refreshPrices()
                 refreshAlarmCropSpinner()
