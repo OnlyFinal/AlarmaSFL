@@ -66,7 +66,7 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
     }
 
     private fun checkAlarms(market: String, prices: Map<String, Double>) {
-        SflData.migrateLegacyAlarms(applicationContext, market)
+        SflData.migrateLegacyAlarms(applicationContext)
         val all = SflData.alarms(applicationContext)
         var changed = false
         for (i in 0 until all.length()) {
