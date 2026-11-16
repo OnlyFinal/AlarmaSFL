@@ -13,7 +13,7 @@ jobs:
       - name: Descargar proyecto
         uses: actions/checkout@v4
 
-      - name: Configurar Java
+      - name: Recuperar firma estable de desarrollo\n        uses: actions/cache@v4\n        with:\n          path: ~/.android/debug.keystore\n          key: alarmasfl-debug-signing-v1\n\n      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
