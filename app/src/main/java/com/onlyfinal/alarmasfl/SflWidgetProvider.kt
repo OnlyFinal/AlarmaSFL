@@ -33,9 +33,9 @@ class SflWidgetProvider : AppWidgetProvider() {
             v.setTextViewText(R.id.updated, if (updated == 0L) "sin datos" else java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(updated)))
             val crop1 = p.getString("widget_crop_1", "Pepper") ?: "Pepper"
             val crop2 = p.getString("widget_crop_2", "Blueberry") ?: "Blueberry"
-            val mode = p.getString("widget_mode", "graph") ?: "graph"
-            setItem(context, v, p, market, crop1, mode, R.id.pepper_name, R.id.pepper_price, R.id.pepper_chart, R.id.pepper_status, Color.rgb(255,90,74), 1)
-            setItem(context, v, p, market, crop2, mode, R.id.blueberry_name, R.id.blueberry_price, R.id.blueberry_chart, R.id.blueberry_status, Color.rgb(108,140,255), 2)
+            val period = p.getString("history_period", "24h") ?: "24h"
+            setItem(context, v, p, market, crop1, period, R.id.pepper_name, R.id.pepper_price, R.id.pepper_chart, R.id.pepper_status, Color.rgb(255,90,74))
+            setItem(context, v, p, market, crop2, period, R.id.blueberry_name, R.id.blueberry_price, R.id.blueberry_chart, R.id.blueberry_status, Color.rgb(108,140,255))
             v.setTextViewText(R.id.widget_error, p.getString("last_error", "") ?: "")
             val intent = Intent(context, MainActivity::class.java)
             val pi = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -44,59 +44,66 @@ class SflWidgetProvider : AppWidgetProvider() {
         }
 
         private fun setItem(context: Context, v: RemoteViews, p: android.content.SharedPreferences,
-                            market: String, name: String, mode: String, nameId: Int, priceId: Int,
-                            chartId: Int, statusId: Int, color: Int, slot: Int) {
+                            market: String, name: String, period: String, nameId: Int, priceId: Int,
+                            chartId: Int, statusId: Int, color: Int) {
             v.setTextViewText(nameId, name.uppercase())
             val key = SflData.priceKey(market, name)
             val price = p.getString(key, null)?.toDoubleOrNull()
                 ?: p.getString("${name}_price", null)?.toDoubleOrNull()
             v.setTextViewText(priceId, price?.let { fmt(it) } ?: "--")
+
+            val periodMs = when (period) {
+                "1h" -> 60L * 60L * 1000L
+                "6h" -> 6L * 60L * 60L * 1000L
+                "7d" -> 7L * 24L * 60L * 60L * 1000L
+                else -> 24L * 60L * 60L * 1000L
+            }
+            val now = System.currentTimeMillis()
             val historyRaw = p.getString(SflData.historyKey(market, name), null)
                 ?: p.getString("${name}_history", "[]") ?: "[]"
             val history = try { JSONArray(historyRaw) } catch (_: Exception) { JSONArray() }
-            val points = (0 until history.length()).mapNotNull { history.optJSONObject(it)?.optDouble("p")?.takeIf { n -> n.isFinite() } }
-            val change = if (points.size > 1 && points.first() != 0.0) (points.last() - points.first()) / points.first() * 100.0 else null
-            val activeAlarms = SflData.alarms(context)
-            val alarmCount = (0 until activeAlarms.length()).count { i ->
-                val a = activeAlarms.optJSONObject(i)
-                a != null && a.optBoolean("enabled", true) && a.optString("crop").equals(name, true) && a.optString("market", "p2p") == market
+            val samples = (0 until history.length()).mapNotNull { i ->
+                val item = history.optJSONObject(i) ?: return@mapNotNull null
+                val t = item.optLong("t", 0L)
+                val value = item.optDouble("p", Double.NaN)
+                if (t > 0L && value.isFinite() && now - t <= periodMs) t to value else null
+            }.sortedBy { it.first }
+            val points = samples.map { it.second }
+            val change = if (points.size > 1 && points.first() > 0.0)
+                (points.last() - points.first()) / points.first() * 100.0 else null
+
+            val alarms = SflData.alarms(context)
+            val buys = mutableListOf<Double>()
+            val sells = mutableListOf<Double>()
+            for (i in 0 until alarms.length()) {
+                val a = alarms.optJSONObject(i) ?: continue
+                if (!a.optBoolean("enabled", true) ||
+                    !a.optString("crop").equals(name, true) ||
+                    a.optString("market", "p2p") != market) continue
+                val target = a.optDouble("target", Double.NaN)
+                if (!target.isFinite()) continue
+                if (a.optString("kind") == "buy") buys.add(target) else sells.add(target)
             }
-            val buyTargets = mutableListOf<Double>()
-            val sellTargets = mutableListOf<Double>()
-            for (i in 0 until activeAlarms.length()) {
-                val a = activeAlarms.optJSONObject(i) ?: continue
-                if (!a.optBoolean("enabled", true) || !a.optString("crop").equals(name, true) || a.optString("market", "p2p") != market) continue
-                if (a.optString("kind") == "buy") buyTargets.add(a.optDouble("target")) else sellTargets.add(a.optDouble("target"))
+            val reachedBuy = price != null && buys.any { price <= it }
+            val reachedSell = price != null && sells.any { price >= it }
+            val closest = price?.let { current ->
+                (buys + sells).minByOrNull { kotlin.math.abs(it - current) }
             }
-            val status = when (mode) {
-                "change" -> change?.let { "Variación: ${if (it >= 0) "+" else ""}${"%.2f".format(it)}%" } ?: "Sin historial suficiente"
-                "stats" -> if (points.isEmpty()) "Sin estadísticas" else "Mín ${fmt(points.minOrNull()!!)} · Máx ${fmt(points.maxOrNull()!!)} · Med ${fmt(points.average())}"
-                "opportunity" -> when {
-                    price == null -> "Esperando precio"
-                    buyTargets.any { price <= it } -> "Objetivo de compra alcanzado"
-                    sellTargets.any { price >= it } -> "Objetivo de venta alcanzado"
-                    else -> "Sin objetivo alcanzado · $alarmCount alarmas"
-                }
-                "distance" -> {
-                    val target = (buyTargets + sellTargets).minByOrNull { kotlin.math.abs(it - (price ?: it)) }
-                    if (price == null || target == null) "Configura alarmas" else "Objetivo más cercano: ${fmt(target)} (${"%.1f".format(kotlin.math.abs(target-price)/max(kotlin.math.abs(target), 0.000001)*100)}%)"
-                }
-                else -> if (alarmCount == 0) "Sin alarmas configuradas" else "$alarmCount alarmas activas"
+            val changeText = change?.let { "Δ ${if (it >= 0) "+" else ""}${"%.2f".format(it)}%" } ?: "Δ --"
+            val rangeText = if (points.isEmpty()) "Sin historial" else "Mín ${fmt(points.minOrNull()!!)} · Máx ${fmt(points.maxOrNull()!!)}"
+            val targetText = when {
+                reachedBuy -> "COMPRA alcanzada"
+                reachedSell -> "VENTA alcanzada"
+                closest != null && price != null -> "Objetivo: ${fmt(closest)}"
+                else -> "Sin objetivos"
             }
-            v.setTextViewText(statusId, status)
-            val bitmap = when (mode) {
-                "change" -> indicatorBitmap(change ?: 0.0, color, mode)
-                "distance" -> indicatorBitmap(if (price != null && buyTargets.isNotEmpty()) 100.0 - (buyTargets.minOf { kotlin.math.abs(price-it) } / max(price, 0.000001) * 1000).coerceIn(0.0,100.0) else 0.0, color, mode)
-                "stats" -> indicatorBitmap(if (points.isNotEmpty()) 100.0 else 0.0, color, mode)
-                "opportunity" -> indicatorBitmap(if (price != null && (buyTargets.any { price <= it } || sellTargets.any { price >= it })) 100.0 else 20.0, color, mode)
-                else -> chart(points, color)
-            }
-            v.setImageViewBitmap(chartId, bitmap)
+            v.setTextViewText(statusId, "$changeText · $rangeText\n$targetText")
+            v.setImageViewBitmap(chartId, chart(points, color, buys + sells))
         }
 
         private fun fmt(x: Double) = if (x >= 100) "%.1f".format(x) else if (x >= 1) "%.3f".format(x) else "%.4f".format(x)
 
-        private fun chart(points: List<Double>, color: Int): Bitmap {
+        private fun chart(points: List<Double>, color: Int, targets: List<Double>): Bitmap {
             val w = 300; val h = 100
             val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val c = Canvas(b)
@@ -113,6 +120,13 @@ class SflWidgetProvider : AppWidgetProvider() {
                     if (i == 0) path.moveTo(x,y) else path.lineTo(x,y)
                 }
                 c.drawPath(path, line)
+                val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = Color.argb(150, 220, 225, 235); strokeWidth = 1.5f; pathEffect = android.graphics.DashPathEffect(floatArrayOf(5f, 5f), 0f) }
+                targets.distinct().forEach { target ->
+                    if (target in lo..hi) {
+                        val y = h-6f - ((target-lo)/span).toFloat()*(h-16)
+                        c.drawLine(0f, y, w.toFloat(), y, targetPaint)
+                    }
+                }
             }
             return b
         }
