@@ -14,10 +14,11 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:layout_width="110dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="ALARMA SFL"
-            android:textColor="#EEF2F7"
+            android:text="🌻 ALARMASFL"
+            android:textColor="#294B32"
             android:textStyle="bold"
             android:textSize="14sp"/>
 
@@ -26,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="sin datos"
-            android:textColor="#93A3BA"
+            android:textColor="#71806B"
             android:textSize="10sp"/>
     </LinearLayout>
 
@@ -56,7 +57,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="PEPPER"
-                android:textColor="#FF5A4A"
+                android:textColor="#B84E3C"
                 android:textStyle="bold"
                 android:textSize="11sp"/>
 
@@ -65,8 +66,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="--"
-                android:textColor="#FFFFFF"
+                android:textColor="#263B2D"
                 android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
                 android:textStyle="bold"/>
 
             <ImageView
@@ -97,7 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="BLUEBERRY"
-                android:textColor="#6C8CFF"
+                android:textColor="#536C9C"
                 android:textStyle="bold"
                 android:textSize="11sp"/>
 
@@ -133,7 +135,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text=""
-        android:textColor="#FFB4A8"
+        android:textColor="#9B493B"
         android:textSize="9sp"
         android:maxLines="2"/>
 </LinearLayout>
