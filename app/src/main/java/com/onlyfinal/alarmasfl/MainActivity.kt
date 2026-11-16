@@ -37,7 +37,7 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 10)
         }
-        SflData.migrateLegacyAlarms()
+        SflData.migrateLegacyAlarms(this)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
