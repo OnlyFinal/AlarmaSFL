@@ -146,10 +146,9 @@ class MainActivity : Activity() {
             val a = JSONArray(raw)
             (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } }.distinct().sorted()
         } catch (_: Exception) { emptyList() }
-        crops = (fromApi + listOf("Pepper", "Blueberry").filter { fallback ->
-            fromApi.none { it.equals(fallback, true) }
-        }).distinct()
-        if (crops.isEmpty()) crops = listOf("Pepper", "Blueberry")
+        // Antes de la primera respuesta de la API conservamos opciones iniciales;
+        // en cuanto llegan los datos, el selector queda limitado a los cultivos reales.
+        crops = if (fromApi.isNotEmpty()) fromApi else listOf("Pepper", "Blueberry")
         val adapterItems = crops
         listOfNotNull(slotOneOrNull(), slotTwoOrNull(), cropForAlarmOrNull()).forEach {
             it.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, adapterItems)
