@@ -36,7 +36,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Plaza (P2P)"
-        android:textColor="#93A3BA"
+        android:textColor="#71806B"
         android:textSize="10sp"
         android:paddingTop="2dp"/>
 
@@ -47,11 +47,17 @@
         android:paddingTop="8dp">
 
         <LinearLayout
-            android:layout_width="110dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingEnd="6dp">
 
+            <ImageView
+                android:id="@+id/pepper_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="Icono del cultivo"/>
             <TextView
                 android:id="@+id/pepper_name"
                 android:layout_width="match_parent"
@@ -83,7 +89,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Sin alertas"
-                android:textColor="#93A3BA"
+                android:textColor="#71806B"
                 android:textSize="9sp"
                 android:maxLines="2"/>
         </LinearLayout>
@@ -94,6 +100,11 @@
             android:orientation="vertical"
             android:paddingStart="6dp">
 
+            <ImageView
+                android:id="@+id/blueberry_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="Icono del cultivo"/>
             <TextView
                 android:id="@+id/blueberry_name"
                 android:layout_width="match_parent"
@@ -108,7 +119,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="--"
-                android:textColor="#FFFFFF"
+                android:textColor="#263B2D"
                 android:textSize="20sp"
                 android:textStyle="bold"/>
 
@@ -124,7 +135,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Sin alertas"
-                android:textColor="#93A3BA"
+                android:textColor="#71806B"
                 android:textSize="9sp"
                 android:maxLines="2"/>
         </LinearLayout>
