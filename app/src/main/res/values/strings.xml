@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Alarma SFL</string>
+    <string name="widget_name">Alarma SFL · Precios y alertas</string>
+    <string name="widget_description">Consulta dos cultivos, sus precios y objetivos de compra y venta.</string>
 </resources>
