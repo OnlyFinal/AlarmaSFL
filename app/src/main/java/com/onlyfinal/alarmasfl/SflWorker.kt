@@ -15,14 +15,17 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
         val prefs = applicationContext.getSharedPreferences("sfl", Context.MODE_PRIVATE)
         try {
             val source = prefs.getString("source", "p2p") ?: "p2p"
-            val json = getJson(prefs)
-            val root = json.optJSONObject("data") ?: json
-            val market = findObject(root, source)
-                ?: root.optJSONObject(source)
-                ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()}")
-
-            val prices = linkedMapOf<String, Double>()
-            collectPrices(market, prices)
+            val prices = if (source == "p2p") {
+                getPlazaPrices()
+            } else {
+                // Sequence continúa usando exactamente la fuente y el parser anteriores.
+                val json = getJson(prefs)
+                val root = json.optJSONObject("data") ?: json
+                val market = findObject(root, source)
+                    ?: root.optJSONObject(source)
+                    ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()}")
+                linkedMapOf<String, Double>().also { collectPrices(market, it) }
+            }
             if (prices.isEmpty()) throw IllegalStateException("La API no devolvió precios reconocibles para ${source.uppercase()}")
 
             val now = System.currentTimeMillis()
@@ -68,6 +71,37 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             prefs.edit().putString("last_error", e.message ?: "Error de conexión").apply()
             SflWidgetProvider.updateAll(applicationContext)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
+        }
+    }
+
+    private fun getPlazaPrices(): Map<String, Double> {
+        var connection: HttpURLConnection? = null
+        try {
+            val endpoint = "https://alarmasfl.finalshadovv.workers.dev/v1/prices/current"
+            connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 12000
+                readTimeout = 15000
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "AlarmaSFL-Android/1.0")
+            }
+            val code = connection.responseCode
+            if (code !in 200..299) throw IllegalStateException("API Plaza respondió HTTP $code")
+            val response = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            if (response.optString("market") != "p2p") throw IllegalStateException("La API devolvió un mercado distinto de Plaza")
+            val sourcePrices = response.optJSONObject("prices")
+                ?: throw IllegalStateException("La API Plaza no contiene precios")
+            val prices = linkedMapOf<String, Double>()
+            val keys = sourcePrices.keys()
+            while (keys.hasNext()) {
+                val crop = keys.next()
+                val price = sourcePrices.optDouble(crop, Double.NaN)
+                if (crop.isNotBlank() && price.isFinite() && price >= 0.0) prices[crop] = price
+            }
+            if (prices.isEmpty()) throw IllegalStateException("La API Plaza devolvió una lista de precios vacía")
+            return prices
+        } finally {
+            connection?.disconnect()
         }
     }
 
