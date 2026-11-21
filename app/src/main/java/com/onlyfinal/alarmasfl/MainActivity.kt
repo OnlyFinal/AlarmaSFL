@@ -96,8 +96,8 @@ class MainActivity : Activity() {
                 cornerRadius = 12f
             }
         }
-        fun spinner(items: List<String>) = Spinner(this).apply {
-            adapter = styledSpinnerAdapter(items)
+        fun spinner(items: List<String>, showIcons: Boolean = true) = Spinner(this).apply {
+            adapter = styledSpinnerAdapter(items, showIcons)
             background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(0xFFFFFCF4.toInt())
                 cornerRadius = 10f
@@ -135,7 +135,7 @@ class MainActivity : Activity() {
         root.addView(errorLabel)
 
         root.addView(heading("1. MERCADO"))
-        source = spinner(listOf("Plaza (P2P)", "Sequence"))
+        source = spinner(listOf("Plaza (P2P)", "Sequence"), showIcons = false)
         source.setSelection(if (prefs.getString("source", "p2p") == "seq") 1 else 0)
         root.addView(source)
 
@@ -269,7 +269,7 @@ class MainActivity : Activity() {
         SflWork.refreshNow(this)
     }
 
-    private fun styledSpinnerAdapter(items: List<String>): ArrayAdapter<String> {
+    private fun styledSpinnerAdapter(items: List<String>, showIcons: Boolean = true): ArrayAdapter<String> {
         return object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items) {
             private fun styledView(position: Int, parent: android.view.ViewGroup?, dropdown: Boolean): TextView {
                 return (getItem(position) ?: "").let { value ->
@@ -283,7 +283,7 @@ class MainActivity : Activity() {
                             setBackgroundColor(0xFFFFFCF4.toInt())
                             minHeight = (48 * resources.displayMetrics.density).toInt()
                         }
-                        val icon = cropIcon(value)
+                        val icon = if (showIcons) cropIcon(value) else null
                         setCompoundDrawables(icon, null, null, null)
                         compoundDrawablePadding = (9 * resources.displayMetrics.density).toInt()
                     }
