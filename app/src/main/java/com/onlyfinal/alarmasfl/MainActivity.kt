@@ -39,9 +39,18 @@ class MainActivity : Activity() {
     private val cropIconCache = mutableMapOf<String, Drawable?>()
 
     private fun cropIcon(name: String): Drawable? {
-        val key = name.lowercase().replace(Regex("[^a-z]"), "")
+        val key = java.text.Normalizer.normalize(
+            name.lowercase(java.util.Locale.ROOT),
+            java.text.Normalizer.Form.NFD
+        ).replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9]"), "")
         if (cropIconCache.containsKey(key)) return cropIconCache[key]
-        val aliases = mapOf("beet" to "beetroot", "sunflowerseed" to "sunflower")
+        val aliases = mapOf(
+            "beet" to "beetroot",
+            "sunflowerseed" to "sunflower",
+            "blueberries" to "blueberry",
+            "darkblueberries" to "darkblueberry",
+            "redpepper" to "pepper"
+        )
         val assetKey = aliases[key] ?: key
         val encoded = cropIconData.optString(assetKey).ifBlank { cropIconData.optString("default") }
         val drawable = try {
@@ -50,6 +59,7 @@ class MainActivity : Activity() {
             BitmapDrawable(resources, bitmap).apply {
                 val size = (30 * resources.displayMetrics.density).toInt()
                 setBounds(0, 0, size, size)
+                paint.isFilterBitmap = false
             }
         } catch (_: Exception) { null }
         cropIconCache[key] = drawable
