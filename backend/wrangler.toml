@@ -1,0 +1,11 @@
+name = "alarmasfl-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-21"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alarmasfl-history"
+database_id = "REEMPLAZAR_CON_EL_ID_DE_D1"
