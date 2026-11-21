@@ -55,6 +55,12 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             editor.putString(SflData.cropsKey(source), cropNames.toString())
                 .putLong("updated", now).remove("last_error").apply()
 
+            // En Plaza, la gráfica del widget se alimenta del historial central
+            // de Cloudflare. Sequence conserva su historial local actual.
+            if (source == "p2p") {
+                syncPlazaWidgetHistory(prefs, prices)
+            }
+
             checkAlarms(source, prices)
             SflWidgetProvider.updateAll(applicationContext)
             Result.success()
@@ -62,6 +68,52 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
             prefs.edit().putString("last_error", e.message ?: "Error de conexión").apply()
             SflWidgetProvider.updateAll(applicationContext)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
+        }
+    }
+
+    private fun syncPlazaWidgetHistory(prefs: android.content.SharedPreferences, prices: Map<String, Double>) {
+        val selectedCrops = listOf(
+            prefs.getString("widget_crop_1", "Pepper") ?: "Pepper",
+            prefs.getString("widget_crop_2", "Blueberry") ?: "Blueberry"
+        ).distinct()
+
+        for (crop in selectedCrops) {
+            if (prices.keys.none { it.equals(crop, true) }) continue
+            var connection: HttpURLConnection? = null
+            try {
+                val encodedCrop = java.net.URLEncoder.encode(crop, "UTF-8")
+                val endpoint = "https://alarmasfl.finalshadovv.workers.dev/v1/prices/history?crop=$encodedCrop&range=7d"
+                connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("User-Agent", "AlarmaSFL-Android/1.0")
+                }
+                val code = connection.responseCode
+                if (code !in 200..299) throw IllegalStateException("HTTP $code")
+                val response = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                if (response.optString("market") != "p2p") throw IllegalStateException("Mercado de historial inesperado")
+                val points = response.optJSONArray("points") ?: JSONArray()
+                val history = JSONArray()
+                val cutoff = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
+                for (i in 0 until points.length()) {
+                    val point = points.optJSONObject(i) ?: continue
+                    val timestamp = point.optLong("t", 0L)
+                    val price = point.optDouble("p", Double.NaN)
+                    if (timestamp >= cutoff && price.isFinite() && price >= 0.0) {
+                        history.put(JSONObject().put("t", timestamp).put("p", price))
+                    }
+                }
+                if (history.length() > 0) {
+                    prefs.edit().putString(SflData.historyKey("p2p", crop), history.toString()).apply()
+                }
+            } catch (_: Exception) {
+                // Si el historial remoto falla, se conserva el historial local
+                // recién actualizado; la consulta de precios y las alarmas siguen funcionando.
+            } finally {
+                connection?.disconnect()
+            }
         }
     }
 
