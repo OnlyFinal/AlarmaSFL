@@ -15,17 +15,14 @@ class SflWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, p
         val prefs = applicationContext.getSharedPreferences("sfl", Context.MODE_PRIVATE)
         try {
             val source = prefs.getString("source", "p2p") ?: "p2p"
-            val prices = if (source == "p2p") {
-                getPlazaPrices()
-            } else {
-                // Sequence continúa usando exactamente la fuente y el parser anteriores.
-                val json = getJson(prefs)
-                val root = json.optJSONObject("data") ?: json
-                val market = findObject(root, source)
-                    ?: root.optJSONObject(source)
-                    ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()}")
-                linkedMapOf<String, Double>().also { collectPrices(market, it) }
-            }
+            // Restaurar la ruta original que ya funcionaba: ambos mercados se
+            // obtienen de sfl.world, con rutas alternativas solo si falla la directa.
+            val json = getJson(prefs)
+            val root = json.optJSONObject("data") ?: json
+            val market = findObject(root, source)
+                ?: root.optJSONObject(source)
+                ?: throw IllegalStateException("No se encontró el mercado ${source.uppercase()}")
+            val prices = linkedMapOf<String, Double>().also { collectPrices(market, it) }
             if (prices.isEmpty()) throw IllegalStateException("La API no devolvió precios reconocibles para ${source.uppercase()}")
 
             val now = System.currentTimeMillis()
