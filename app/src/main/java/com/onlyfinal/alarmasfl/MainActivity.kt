@@ -49,10 +49,19 @@ class MainActivity : Activity() {
             "sunflowerseed" to "sunflower",
             "blueberries" to "blueberry",
             "darkblueberries" to "darkblueberry",
-            "redpepper" to "pepper"
+            "redpepper" to "pepper",
+            "capsulebait" to "baitcapsule",
+            "umbrellabait" to "baitumbrella",
+            "crimsonbaitfish" to "baitcrimson",
+            "sunflorianemblem" to "sunflorianemblem",
+            "bumpkinemblem" to "bumpkinemblem"
         )
         val assetKey = aliases[key] ?: key
-        val encoded = cropIconData.optString(assetKey).ifBlank { cropIconData.optString("default") }
+        val encoded = cropIconData.optString(assetKey)
+        if (encoded.isBlank()) {
+            cropIconCache[key] = null
+            return null
+        }
         val drawable = try {
             val bytes = Base64.decode(encoded, Base64.DEFAULT)
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
